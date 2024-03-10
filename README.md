@@ -1,1 +1,1 @@
-# BizCardX-Extracting-business-car-dat-with-OCR
+# BizCardX-Extracting-business-card-data-with-OCR
