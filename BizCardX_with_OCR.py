@@ -11,17 +11,17 @@ import re
 
 #-------------------------PAGE SETUP-----------------------#
 st.set_page_config(page_title= "BizCardX", layout= "wide")
-st.markdown("<h2 style='text-align: center;'>BizCardX: Extracting Business Card Data with OCR</h2>", unsafe_allow_html=True)
-st.markdown(f""" <style>.stApp {{  background: #9BC4CB;}} .stApp > header {{ background: #5F634F;}}</style>""",unsafe_allow_html=True) 
+st.markdown("<h1 style='text-align: center; '>BizCardX: Extracting Business Card Data with OCR</h1>", unsafe_allow_html=True)
+st.markdown(f""" <style>.stApp {{  background: #9A8C98 ;}} .stApp > header {{ background: #22223B; color: white;}}</style>""",unsafe_allow_html=True) 
 #---------------------SIDEBAR OPTIONS------------------#
 option = option_menu(None, ["Upload Card","View & Modify Data"], 
                        icons=["cloud-upload","card-list"],
                        default_index=0,
                        orientation="horizontal",
-                       styles={"nav-link": {"font-size": "25px", "text-align": "centre", "margin": "0px", "--hover-color": "#CFEBDF","color":"black"},
+                       styles={"nav-link": {"font-size": "25px", "text-align": "centre", "margin": "0px", "--hover-color": "#C9ADA7","color":"#22223B"},
                                "icon": {"font-size": "25px"},
                                "container" : {"max-width": "6000px"},
-                               "nav-link-selected": {"background-color": "#CFEBDF"}})
+                               "nav-link-selected": {"background-color": "#C9ADA7"}})
 
 #------------- INITIALIZING THE EasyOCR READER------------------------#
 reader = easyocr.Reader(['en'])
@@ -53,7 +53,7 @@ mycursor.execute('''CREATE TABLE IF NOT EXISTS business_cards
 #--------------UPLOAD CARD MENU----------------#
 if option == "Upload Card":
     st.markdown("### Upload a Business Card")
-    uploaded_card = st.file_uploader("upload here",label_visibility="collapsed",type=["png","jpeg","jpg"])
+    uploaded_card = st.file_uploader("upload here",label_visibility="hidden",type=["png","jpeg","jpg"])
         
     if uploaded_card is not None:
         
@@ -81,26 +81,24 @@ if option == "Upload Card":
         col1,col2 = st.columns(2,gap="large")
         with col1:
             st.markdown("#     ")
-            st.markdown("#     ")
-            st.markdown("### You have uploaded the card")
+            st.markdown(" ### The Uploaded Card")
             st.image(uploaded_card)
         # DISPLAYING THE CARD WITH HIGHLIGHTS
         with col2:
-            st.markdown("#     ")
             st.markdown("#     ")
             with st.spinner("Please wait processing image..."):
                 st.set_option('deprecation.showPyplotGlobalUse', False)
                 saved_img = os.getcwd()+ "\\" + "uploaded_cards"+ "\\"+ uploaded_card.name
                 image = cv2.imread(saved_img)
                 res = reader.readtext(saved_img)
-                st.markdown("### Image Processed and Data Extracted")
+                st.markdown("### Image Processed")
                 st.pyplot(image_preview(image,res))  
                 
             
         #easy OCR
         saved_img = os.getcwd()+ "\\" + "uploaded_cards"+ "\\"+ uploaded_card.name
         result = reader.readtext(saved_img,detail = 0,paragraph=False)
-        
+   
         # CONVERTING IMAGE TO BINARY TO UPLOAD TO SQL DATABASE
         def img_to_binary(file):
             # Convert image data to binary format
@@ -191,8 +189,11 @@ if option == "Upload Card":
             return df
         df = create_df(data)
         st.success("### Data Extracted!")
-        st.write(df)
-        
+        st.dataframe(df)
+        st.markdown("""<style>div.stButton > button:first-child{
+                background-color : #22223B;
+                color: white;    
+                }</style>""", unsafe_allow_html=True)
         if st.button("Upload to Database"):
             for i,row in df.iterrows():
                 #here %S means string values 
@@ -204,58 +205,101 @@ if option == "Upload Card":
 
 # MODIFY MENU    
 if option == "View & Modify Data":
+    
+        
+    tab1,tab2 = st.tabs(['Update Data','Delete Data'])
+    st.markdown("""
+    <style>
 
-    col1,col2,col3 = st.columns([3,3,2])
-    col2.markdown("## Alter or Delete the data here")
-    column1,column2 = st.columns(2,gap="large")
-    try:
-        with column1:
-            mycursor.execute("SELECT card_holder FROM business_cards")
-            result = mycursor.fetchall()
+    	.stTabs [data-baseweb="tab-list"]{
+	                                        gap: 2px;
+                                            }
+
+	    .stTabs [data-baseweb="tab"] {
+		                height: 50px;
+                        width: 350px;
+                        font-weight: bold;
+                        font-family: "Source Sans Pro", sans-serif;
+                        white-space: pre-wrap;
+		                background-color: #FFFFFF;
+		                border-radius: 4px 4px 0px 0px;
+		                gap: 1px;
+		                padding-top: 10px;
+		                padding-bottom: 10px;
+                                        }
+
+	        .stTabs [aria-selected="true"] {
+  		                background-color: #C9ADA7;
+	                                        }
+            .st-emotion-cache-l9bjmx p  {
+                font-weight: bold;
+                font-size: larger ;
+            }
+
+    </style>""", unsafe_allow_html=True)
+    with tab1:
+        mycursor.execute("SELECT card_holder FROM business_cards")
+        result = mycursor.fetchall()
+        if bool(result) is True:
             business_cards = {}
             for row in result:
                 business_cards[row[0]] = row[0]
             selected_card = st.selectbox("Select a card holder name to update", list(business_cards.keys()))
-            st.markdown("#### Update or modify any data below")
+            st.markdown("#### Update any data below")
             mycursor.execute("select company_name,card_holder,designation,mobile_number,email,website,area,city,state,pin_code from business_cards WHERE card_holder='%s'" % selected_card)
             result = mycursor.fetchone()
             # DISPLAYING ALL THE INFORMATIONS
-            company_name = st.text_input("Company_Name", result[0])
-            card_holder = st.text_input("Card_Holder", result[1])
-            designation = st.text_input("Designation", result[2])
-            mobile_number = st.text_input("Mobile_Number", result[3])
-            email = st.text_input("Email", result[4])
-            website = st.text_input("Website", result[5])
-            area = st.text_input("Area", result[6])
-            city = st.text_input("City", result[7])
-            state = st.text_input("State", result[8])
-            pin_code = st.text_input("Pin_Code", result[9])
+            with st.container(height=500,border=True):
+                company_name = st.text_input("Company_Name", result[0])
+                card_holder = st.text_input("Card_Holder", result[1])
+                designation = st.text_input("Designation", result[2])
+                mobile_number = st.text_input("Mobile_Number", result[3])
+                email = st.text_input("Email", result[4])
+                website = st.text_input("Website", result[5])
+                area = st.text_input("Area", result[6])
+                city = st.text_input("City", result[7])
+                state = st.text_input("State", result[8])
+                pin_code = st.text_input("Pin_Code", result[9])
+            b1,b2,b3=st.columns([3,7,12])
+            st.markdown("""<style> div.stButton > button:first-child {background-color: #22223B;color:white;font-size:20px;height:3em;width:20em;border-radius:10px 10px 10px 10px;}</style>""", unsafe_allow_html=True)
+            with b2:
+                if st.button("Update Details",use_container_width=True):
+                    # Update the information for the selected business card in the database
+                    mycursor.execute("""UPDATE business_cards SET company_name=%s,card_holder=%s,designation=%s,mobile_number=%s,email=%s,website=%s,area=%s,city=%s,state=%s,pin_code=%s
+                                        WHERE card_holder=%s""", (company_name,card_holder,designation,mobile_number,email,website,area,city,state,pin_code,selected_card))
+                    mydb.commit()
+                    st.success("Information updated in database successfully !")
+            with b3:
+                b3_button=st.button("View Updated Data",use_container_width=True)
+            if b3_button:
+                mycursor.execute("select company_name,card_holder,designation,mobile_number,email,website,area,city,state,pin_code from business_cards")
+                updated_df = pd.DataFrame(mycursor.fetchall(),columns=["Company_Name","Card_Holder","Designation","Mobile_Number","Email","Website","Area","City","State","Pin_Code"])
+                st.write(updated_df)
+        else:
+            st.warning("There is no data in the database")
 
-            if st.button("Update Details"):
-                # Update the information for the selected business card in the database
-                mycursor.execute("""UPDATE business_cards SET company_name=%s,card_holder=%s,designation=%s,mobile_number=%s,email=%s,website=%s,area=%s,city=%s,state=%s,pin_code=%s
-                                    WHERE card_holder=%s""", (company_name,card_holder,designation,mobile_number,email,website,area,city,state,pin_code,selected_card))
-                mydb.commit()
-                st.success("Information updated in database successfully !")
-
-        with column2:
-            mycursor.execute("SELECT card_holder FROM business_cards")
-            result = mycursor.fetchall()
+    with tab2:
+        mycursor.execute("SELECT card_holder FROM business_cards")
+        result = mycursor.fetchall()
+        if bool(result) is True:
             business_cards = {}
             for row in result:
                 business_cards[row[0]] = row[0]
             selected_card = st.selectbox("Select a card holder name to Delete", list(business_cards.keys()))
             st.write(f"### You have selected :red[**{selected_card}'s**] card to delete")
             st.write("#### Proceed to delete this card?")
-
-            if st.button("Yes Delete Business Card"):
-                mycursor.execute(f"DELETE FROM business_cards WHERE card_holder='{selected_card}'")
-                mydb.commit()
-                st.success("Business card deleted successfully!")
-    except:
-        st.warning("There is no data available in the database")
-    
-    if st.button("View updated data"):
-        mycursor.execute("select company_name,card_holder,designation,mobile_number,email,website,area,city,state,pin_code from business_cards")
-        updated_df = pd.DataFrame(mycursor.fetchall(),columns=["Company_Name","Card_Holder","Designation","Mobile_Number","Email","Website","Area","City","State","Pin_Code"])
-        st.write(updated_df)
+            b1,b2,b3=st.columns([3,7,12])
+            with b2:
+                if st.button("Yes Delete Business Card"):
+                    mycursor.execute(f"DELETE FROM business_cards WHERE card_holder='{selected_card}'")
+                    mydb.commit()
+                    st.success("Business card deleted successfully!")
+            with b3:
+                b3_button= st.button("View Data",use_container_width=True)
+            if b3_button:
+                mycursor.execute("select company_name,card_holder,designation,mobile_number,email,website,area,city,state,pin_code from business_cards")
+                updated_df = pd.DataFrame(mycursor.fetchall(),columns=["Company_Name","Card_Holder","Designation","Mobile_Number","Email","Website","Area","City","State","Pin_Code"])
+                st.write(updated_df)
+        else:
+            st.warning("There is no data in the database")
+                
